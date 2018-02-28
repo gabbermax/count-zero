@@ -45,7 +45,7 @@ function convert_to_utf8($in_charset, $str){
     return iconv(strtolower($in_charset), "utf-8", $str);
 }
 
-$resource =imap_open('{imap.yandex.ru:993/imap/ssl}INBOX','speedcore222@yandex.ru','speedcore');
+$resource =imap_open('{imap.yandex.ru:993/imap/ssl}INBOX','*******','***************');
 $list = imap_list($resource, '{imap.yandex.ru:993/imap/ssl}', '*');
 
 $urgent=imap_search($resource,'FLAGGED',SE_UID);
