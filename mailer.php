@@ -12,52 +12,9 @@
 //todo load a lot of mails by shell curl
 //todo classes ?
 echo time(),"<br> start<br>";
-
 require_once ('dbase.php');
 //list of emails
-require_once ('config.php');
-
-function recursive_search($structure){
-
-    $encoding = "";
-
-    if($structure->subtype == "HTML" ||
-        $structure->type == 0){
-
-        if($structure->parameters[0]->attribute == "charset"){
-
-            $charset = $structure->parameters[0]->value;
-        }
-
-        return array(
-            "encoding" => $structure->encoding,
-            "charset"  => strtolower($charset),
-            "subtype"  => $structure->subtype
-        );
-    }else{
-
-        if(isset($structure->parts[0])){
-
-            return recursive_search($structure->parts[0]);
-        }else{
-
-            if($structure->parameters[0]->attribute == "charset"){
-
-                $charset = $structure->parameters[0]->value;
-            }
-
-            return array(
-                "encoding" => $structure->encoding,
-                "charset"  => strtolower($charset),
-                "subtype"  => $structure->subtype
-            );
-        }
-    }
-}
-function convert_to_utf8($in_charset, $str){
-
-    return iconv(strtolower($in_charset), "utf-8", $str);
-}
+//require_once ('config.php');
 echo time(),"<br> connect to yandex <br>";
 $resource =imap_open('{imap.yandex.ru:993/imap/ssl}INBOX','ifconfig26','ifconfig2600');//'speedcore222@yandex.ru','speedcore');
 $list = imap_list($resource, '{imap.yandex.ru:993/imap/ssl}', '*');
