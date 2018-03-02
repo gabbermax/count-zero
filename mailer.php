@@ -16,7 +16,7 @@ require_once ('dbase.php');
 //list of emails
 //require_once ('config.php');
 echo time(),"<br> connect to yandex <br>";
-$resource =imap_open('{imap.yandex.ru:993/imap/ssl}INBOX','ifconfig26','ifconfig2600');//'speedcore222@yandex.ru','speedcore');
+$resource =imap_open('{imap.yandex.ru:993/imap/ssl}INBOX','********','*************');//'speedcore222@yandex.ru','speedcore');
 $list = imap_list($resource, '{imap.yandex.ru:993/imap/ssl}', '*');
 $urgent=imap_search($resource,'FLAGGED',SE_UID);//list of flagged messages
 $tempCount=count($urgent);
