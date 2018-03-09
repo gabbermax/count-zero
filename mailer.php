@@ -1,70 +1,79 @@
 <?php
-//todo timestamp in sql
-    //ready
-//todo brocken encoding
-    //2 types of encoding ,looks works
-//todo encoding for subject
-    //if it needs
-//todo dbase store only message id
-    //
-//todo  send to dbase
-    //some part may be encoded
-//todo load a lot of mails by shell curl
-//todo classes ?
-echo time(),"<br> start<br>";
-require_once ('dbase.php');
-//list of emails
-//require_once ('config.php');
-echo time(),"<br> connect to yandex <br>";
-$resource =imap_open('{imap.yandex.ru:993/imap/ssl}INBOX','********','*************');//'speedcore222@yandex.ru','speedcore');
-$list = imap_list($resource, '{imap.yandex.ru:993/imap/ssl}', '*');
-$urgent=imap_search($resource,'FLAGGED',SE_UID);//list of flagged messages
-$tempCount=count($urgent);
-$db_con->multi_query('set character_set_client="utf8"');
-$mNumber=[];
-echo time(),"<br> mail received   and tempcount is $tempCount <br>";
-for ($i=0;$i<$tempCount;$i++){
-    //get id of mail message
-    $uid=($urgent[$i]);
-    $mNumber[$i]=imap_msgno($resource,$urgent[$i]);
-    $message_head=imap_header($resource,$mNumber[$i]);
-    $eSender= $message_head->senderaddress;
-    //cleaning sender name
-    $eSender=preg_replace('/.*?</','', $eSender);
-    $eSender=(str_replace('>','',$eSender));
-    $eDate=strtotime($message_head->date);//storing in UNIX time
-    $eHeader=$message_head->subject;
-    $eBody=imap_body($resource,$mNumber[$i]);
-    preg_match('/Encoding:\ quoted-printable/', $eBody, $Rprint);
-    preg_match('/base64/', $eBody, $Rbase);
-    //recoding
-    if (isset($Rprint[0])){
-            $eBody=imap_qprint(imap_body($resource,$mNumber[$i]));
-            $trigger=NULL;
-         }
-    elseif (isset($Rbase[0])) {
-          $eBody=str_replace('Content-Transfer-Encoding: base64','',$eBody);
-          $eBody= imap_base64($eBody);
-        }
-    // we have 3 encoding so else is NEED
-    else { //just do not change $eBody;
-        }
-    $eHeader=$db_con->real_escape_string($eHeader);
-    $eBody=$db_con->real_escape_string($eBody);
-    $uid=$db_con->real_escape_string($uid);
-    $eSender=$db_con->real_escape_string($eSender);
+spl_autoload_register('myAutoloader');
 
-    $query="insert into email1(edate,header,sender,message,uid) values ('"
+function myAutoloader($className)
+{
+    $path = 'classes/'.$className.'.php';
+
+
+    return include $path;
+
+}
+
+$resource   = imap_open('{imap.yandex.ru:993/imap/ssl}INBOX','*','*');
+$list       = imap_list($resource, '{imap.yandex.ru:993/imap/ssl}', '*');
+//$imap_check = imap_check($resource);
+$imap_head  = imap_headerinfo($resource,1);
+$Num_mess   = imap_num_msg($resource);
+//todo пробовать на другой системе с wireshark  , по прежнему без результата
+$alerts     = imap_alerts();
+$urgent     = imap_search($resource,'FLAGGED',SE_UID);//list of flagged messages
+$tempCount  = count($urgent);
+$query='';
+$mNumber = [];
+$MC          = imap_check($resource);
+$allMessages = imap_fetch_overview($resource,"1:{$MC->Nmsgs}",0);
+$kolvoMess   = count($allMessages);
+
+//
+for ($i=0;$i<$kolvoMess;$i++){
+
+    $uid          = ($allMessages[$i]->uid);
+    $mNumber[$i]  = imap_msgno($resource,$uid);
+    $message_head = imap_header($resource,$mNumber[$i]);
+    $eSender      = $message_head->senderaddress;
+    $eflags       = $message_head->Flagged;
+    $erecent      = $message_head->Recent;
+    $eAnswered    = $message_head->Answered;
+    $eDeleted     = $message_head->Deleted;
+    $eDraft       = $message_head->Draft;
+    $eSize        = $message_head->Size;
+    $eSender      = preg_replace('/.*?</','', $eSender);
+    $eSender      = preg_replace('/.*?</','', $eSender);
+    $eSender      = (str_replace('>','',$eSender));
+    $eDate        = strtotime($message_head->date);//storing in UNIX time
+    $eHeader      = $message_head->subject;
+    $is_base64    = substr_count($eHeader,'=?UTF-8?B?');
+
+    if($is_base64){
+        $eHeader = preg_replace('/=\?UTF\-8\?B\?/','', $eHeader);
+        $eHeader = preg_replace('/\?=/','', $eHeader);
+        $eHeader = imap_base64($eHeader);
+    }
+
+     $query1="insert into 
+     email1(edate,header,sender,uid,flagged,recent,answered,deleted,draft,size)
+     values ('"
     .$eDate."','"
     .$eHeader."','"
     .$eSender."','"
-    .$eBody."','"
-    .$uid."')";
+    .$uid."','"
+    .$eflags."','"
+    .$erecent."','"
+    .$eAnswered."','"
+    .$eDeleted."','"
+    .$eDraft."','"
+    .$eSize."'
+    )";
+    //делаем очередь из писем
+    $query=$query.$query1.";";
 
-    $db_con->multi_query($query);
-    echo mysqli_error($db_con);
-    echo time(),"<br> dbase $i <br>";
 }
+$db_con2=new db_con;
+$db_con2->connect();
+//это функция mysqli , она не устаревшая ,prepare возвращает false
+$query=$db_con2->db->real_escape_string($query);
+$db_con2->db->multi_query($query);
 
 
 imap_close($resource);
